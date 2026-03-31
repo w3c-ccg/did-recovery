@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>DID Key Recovery 1.0</title>
+    <meta http-equiv='Content-Type' content='text/html;charset=utf-8'/>
+    <script src='https://www.w3.org/Tools/respec/respec-w3c' class='remove'></script>
+    <script src="https://cdn.jsdelivr.net/gh/digitalbazaar/respec-vc@3.4.2/dist/main.js" class="remove"></script>
+    <script type="text/javascript" class="remove">
+      var respecConfig = {
+        specStatus: "CG-DRAFT",
+        shortName: "did-recovery",
+        subtitle: "A DID Extension for Key Recovery Mechanisms",
+        localBiblio: {
+          'FELDMAN': {
+            title: 'A Practical Scheme for Non-interactive Verifiable Secret Sharing',
+            href: 'https://dl.acm.org/doi/10.1109/SFCS.1987.47',
+            authors: ['Paul Feldman'],
+            date: '1987'
+          },
+          'FROST': {
+            title: 'Flexible Round-Optimized Schnorr Threshold Signatures',
+            href: 'https://datatracker.ietf.org/doc/draft-irtf-cfrg-frost/',
+            authors: ['Deirdre Connolly', 'Chelsea H. Komlo', 'Ian Goldberg', 'Christopher A. Wood'],
+            date: '2023'
+          },
+          'VDF': {
+            title: 'Verifiable Delay Functions',
+            href: 'https://eprint.iacr.org/2018/601',
+            authors: ['Dan Boneh', 'Joseph Bonneau', 'Benedikt Bünz', 'Ben Fisch'],
+            date: '2018'
+          },
+          'PROACTIVE': {
+            title: 'Proactive Secret Sharing Or: How to Cope With Perpetual Leakage',
+            href: 'https://link.springer.com/chapter/10.1007/3-540-58607-1_59',
+            authors: ['Amir Herzberg', 'Stanislaw Jarecki', 'Hugo Krawczyk', 'Moti Yung'],
+            date: '1995'
+          },
+          'SAFE-PRIME': {
+            title: 'Recommendation for Key Management',
+            href: 'https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-57pt1r5.pdf',
+            authors: ['NIST'],
+            date: '2020'
+          },
+          'BIP32': {
+            title: 'Hierarchical Deterministic Wallets',
+            href: 'https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki',
+            authors: ['Pieter Wuille'],
+            date: '2012'
+          },
+          'BIP39': {
+            title: 'Mnemonic code for generating deterministic keys',
+            href: 'https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki',
+            authors: ['Marek Palatinus', 'Pavol Rusnak', 'Aaron Voisine', 'Sean Bowe'],
+            date: '2013'
+          }
+        },
+        doJsonLd: true,
+        github: "https://github.com/w3c-ccg/did-recovery/",
+        includePermalinks: false,
+        edDraftURI: "https://w3c-ccg.github.io/did-recovery/",
+        editors: [
+          { name: "Amir Hameed Mir", url: "mailto:amir.hameed.mir@example.org" }
+        ],
+        authors: [],
+        group: 'credentials',
+        wgPatentURI: "https://www.w3.org/2004/01/pp-impl/98922/status",
+        maxTocLevel: 2,
+        inlineCSS: true,
+        xref: ["infra", "web-platform", "did", "vc-data-model", "vc-data-integrity"],
+        lint: { "informative-dfn": false },
+        otherLinks: [{
+          key: "Related Documents",
+          data: [{
+            value: "Decentralized Identifiers v1.0",
+            href: "https://www.w3.org/TR/did/"
+          }, {
+            value: "Controlled Identifiers v1.0",
+            href: "https://www.w3.org/TR/cid/"
+          }, {
+            value: "Data Integrity v1.0",
+            href: "https://www.w3.org/TR/vc-data-integrity/"
+          }]
+        }]
+      };
+    </script>
+    <style>
+      code {
+        color: rgb(199, 73, 0);
+        font-weight: bold;
+      }
+      pre {
+        overflow-x: auto;
+        white-space: pre-wrap;
+      }
+      pre .highlight {
+        font-weight: bold;
+        color: Green;
+      }
+      .math-block {
+        background: #f1f5f9;
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
+        font-family: monospace;
+        margin: 1.5rem 0;
+        overflow-x: auto;
+      }
+      .callout {
+        border-radius: 8px;
+        padding: 1rem 1.5rem;
+        margin: 1.5rem 0;
+        border-left: 4px solid;
+      }
+      .callout.note {
+        border-left-color: #1d4ed8;
+        background: #eef3fd;
+      }
+      .callout.warning {
+        border-left-color: #b45309;
+        background: #fef3c7;
+      }
+      .callout.security {
+        border-left-color: #059669;
+        background: #d1fae5;
+      }
+      .diagram-container {
+        margin: 2rem 0;
+        background: #fafbfc;
+        border: 1px solid #e1e8f0;
+        border-radius: 12px;
+        padding: 1.5rem;
+      }
+      .diagram-title {
+        font-family: monospace;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: #5f6f88;
+        margin-bottom: 1rem;
+        border-bottom: 1px solid #e1e8f0;
+        padding-bottom: 0.5rem;
+      }
+      .param-box {
+        background: #f1f5f9;
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
+        font-family: monospace;
+        margin: 1rem 0;
+      }
+      .param-row {
+        display: flex;
+        gap: 1rem;
+        padding: 0.25rem 0;
+      }
+      .param-key {
+        font-weight: 600;
+        min-width: 80px;
+        color: #1d4ed8;
+      }
+      table.simple {
+        border-collapse: collapse;
+        margin: 25px 0;
+        min-width: 400px;
+        border: 1px solid #dddddd;
+      }
+      table.simple thead tr {
+        background-color: #005a9c;
+        color: #ffffff;
+        text-align: left;
+      }
+      table.simple th,
+      table.simple td {
+        padding: 12px 15px;
+        vertical-align: top;
+        text-align: left;
+      }
+      table.simple tbody tr {
+        border-bottom: 1px solid #dddddd;
+      }
+      table.simple tbody tr:nth-of-type(even) {
+        background-color: #00000008;
+      }
+      table.simple tbody tr:last-of-type {
+        border-bottom: 2px solid #005a9c;
+      }
+      .badge {
+        display: inline-block;
+        padding: 0.2em 0.6em;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-family: monospace;
+      }
+      .badge-done { background: #d1fae5; color: #059669; }
+      .badge-todo { background: #fef3c7; color: #b45309; }
+      dfn {
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <section id='abstract'>
+      <p>
+This specification defines a standardized, interoperable mechanism for recovering
+control of [=Decentralized Identifiers=] (DIDs) when private keys are lost or
+compromised. It introduces three complementary recovery types — Social ZKP
+Recovery, Deterministic Seedling Inheritance, and MPC-based Mediated Recovery —
+each addressing different trust models and user personas. The specification
+includes cryptographic hardening through mathematically correct Verifiable Secret
+Sharing (Feldman VSS over a proper prime-order group), Verifiable Delay Functions,
+Proactive Secret Refreshment, and comprehensive security considerations with a
+formal JSON-LD context for machine interoperability.
+      </p>
+    </section>
+
+    <section id='sotd'>
+      <p>
+This document is a draft specification being developed by the
+<a href="https://www.w3.org/community/credentials/">W3C Credentials Community Group</a>.
+Comments and contributions are welcome via the <a href="https://github.com/w3c-ccg/did-recovery/">GitHub repository</a>.
+      </p>
+    </section>
+
+    <section class="informative">
+      <h2>Introduction</h2>
+
+      <p>
+The [=Decentralized Identifier=] (DID) architecture provides the foundation for
+self-sovereign identity but deliberately omits key recovery mechanisms, leaving
+implementers to develop ad-hoc, non-interoperable solutions. This gap represents
+a critical barrier to mass adoption, as users face permanent loss of identity or
+vendor lock-in when keys are lost. The DID Key Recovery Extension (DID-KR)
+addresses this gap by defining standardized recovery methods that can be published
+in DID Documents, discovered by resolvers, and executed through interoperable
+protocols.
+      </p>
+
+      <p>
+The specification embraces a three-way solution recognizing that no single recovery
+model suits all use cases:
+      </p>
+
+      <ul>
+        <li><strong>Type A (Social ZKP Recovery):</strong> For users prioritizing autonomy, using threshold cryptography with zero-knowledge proofs to prevent guardian collusion.</li>
+        <li><strong>Type B (Deterministic Seedling):</strong> For inheritance and migration, using hierarchical deterministic keys with Verifiable Delay Functions for decentralized time-locks.</li>
+        <li><strong>Type C (MPC-Mediated):</strong> For enterprise and convenience users, using multi-party computation with threshold signatures and proactive share refreshment.</li>
+      </ul>
+
+      <section>
+        <h3>Design Goals</h3>
+        <ul>
+          <li><strong>Non-Custodial:</strong> No single entity ever possesses the full private key.</li>
+          <li><strong>Interoperable:</strong> Recovery methods are discoverable and executable across different wallet implementations.</li>
+          <li><strong>Privacy-Preserving:</strong> Recovery metadata minimizes leakage of social graphs and security posture.</li>
+          <li><strong>Mathematically Sound:</strong> All cryptographic constructions use correctly parameterized groups with proven security properties.</li>
+          <li><strong>Future-Proof:</strong> Cryptographic agility allows migration to quantum-resistant algorithms.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h3>Relationship to DID Core</h3>
+        <p>This specification extends DID Core by defining:</p>
+        <ol>
+          <li>A new <code>recovery</code> verification relationship.</li>
+          <li>Three new verification method types for recovery.</li>
+          <li>Service endpoint definitions for recovery protocols.</li>
+          <li>A JSON-LD context for machine-readable discovery.</li>
+        </ol>
+      </section>
+    </section>
+
+    <section id="conformance"></section>
+
+    <section class="normative">
+      <h2>Terminology</h2>
+
+      <p>
+Some terminology used throughout this document is defined in the
+<a data-cite="DID#terminology">Terminology</a> section of the [[[DID]]]
+specification. This section defines additional terms used throughout this
+specification.
+      </p>
+
+      <dl class="termlist definitions" data-sort="ascending">
+        <dt><dfn class="export">Beneficiary</dfn></dt>
+        <dd>
+An entity authorized to inherit a DID in Type B schemes. The beneficiary is
+typically designated by the DID controller during setup and receives the ability
+to claim control of the DID after a specified time period or event, such as
+prolonged inactivity of the original controller.
+        </dd>
+
+        <dt><dfn class="export">Catch-up Protocol</dfn></dt>
+        <dd>
+A mechanism for synchronizing lagging MPC providers to the current [=epoch=]. The
+protocol enables providers that have missed share refreshment cycles to obtain
+verifiable refresh transcripts and update their shares without compromising the
+security of the underlying secret.
+        </dd>
+
+        <dt><dfn class="export">Commitment Group</dfn></dt>
+        <dd>
+The multiplicative group modulo a prime p, denoted Z<sub>p</sub>*, used for Feldman
+commitments. This group is distinct from the [=scalar field=] and is chosen such
+that q divides (p−1), ensuring a subgroup of prime order q exists. All commitment
+operations are performed in this group.
+        </dd>
+
+        <dt><dfn class="export">Epoch</dfn></dt>
+        <dd>
+A version identifier for MPC provider share sets, incremented with each
+[=share refreshment=] operation. Epochs enable detection of state drift and provide
+a mechanism for synchronizing providers through the [=catch-up protocol=]. The
+current epoch value is published in the DID Document as part of the share rotation
+metadata.
+        </dd>
+
+        <dt><dfn class="export">Guardian</dfn></dt>
+        <dd>
+An entity holding a share of a recovery secret in Type A schemes. Guardians are
+trusted individuals or organizations selected by the DID controller to participate
+in the recovery process. A [=threshold=] of guardians must cooperate to reconstruct
+the recovery secret, with each guardian proving knowledge of their share through
+zero-knowledge proofs without revealing the share itself.
+        </dd>
+
+        <dt><dfn class="export">Provider</dfn></dt>
+        <dd>
+An MPC node participating in [=threshold=] signature generation for Type C schemes.
+Providers collectively hold shares of a secret key and perform distributed signing
+operations without any single provider reconstructing the full private key.
+Providers MAY be operated by independent entities to increase security and reduce
+trust requirements.
+        </dd>
+
+        <dt><dfn class="export">Recovery Method</dfn></dt>
+        <dd>
+A verification method specifically designated for recovering control of a DID.
+Recovery methods are published in the DID Document under the <code>recovery</code>
+verification relationship and define the protocol, parameters, and participants
+necessary to perform recovery operations. These methods MUST NOT be used for
+general authentication or assertion purposes.
+        </dd>
+
+        <dt><dfn class="export">Safe Prime</dfn></dt>
+        <dd>
+A prime p such that p = 2q+1 and q is also prime. Safe primes are used to guarantee
+the existence of a subgroup of prime order q in Z<sub>p</sub>*. The use of safe
+primes ensures that the order of any element g (other than 1 and p−1) is either q
+or 2q, enabling selection of a generator g with order exactly q for cryptographic
+operations.
+        </dd>
+
+        <dt><dfn class="export">Scalar Field</dfn></dt>
+        <dd>
+A prime field of order q, denoted Z<sub>q</sub>, used for polynomial arithmetic in
+Verifiable Secret Sharing (VSS). All share values, polynomial coefficients, and
+Lagrange interpolation operations are performed in this field. The field order q
+MUST be prime and MUST satisfy the condition that q divides (p−1) where p is the
+[=commitment group=] modulus.
+        </dd>
+
+        <dt><dfn class="export">Share Refreshment</dfn></dt>
+        <dd>
+The process of generating new secret shares without changing the secret or the
+public commitments. Share refreshment is achieved by adding shares of a zero-secret
+refresh polynomial to existing shares, effectively re-randomizing the share
+distribution. This process, also known as proactive secret sharing, limits the
+exposure window for compromised shares and enables recovery from share leakage
+without changing the underlying secret.
+        </dd>
+
+        <dt><dfn class="export">Threshold</dfn></dt>
+        <dd>
+The minimum number of shares or participants required to complete recovery. In
+Type A schemes, threshold (t) represents the number of guardians whose shares must
+be combined to reconstruct the recovery secret. In Type C schemes, threshold
+represents the minimum number of MPC providers that must participate to generate a
+valid threshold signature. The threshold MUST be less than or equal to the total
+number of participants (n) and is typically set to a value that balances security
+against availability requirements.
+        </dd>
+
+        <dt><dfn class="export">Verifiable Delay Function</dfn></dt>
+        <dd>
+A function requiring a specific amount of sequential computation to evaluate, while
+producing a proof that can be verified efficiently. Verifiable Delay Functions
+(VDFs) are used in Type B schemes to create decentralized time-locks, ensuring
+that inheritance keys cannot be released before a specified time period has
+elapsed, regardless of available parallel computing resources.
+        </dd>
+
+        <dt><dfn class="export">Verifiable Secret Sharing</dfn></dt>
+        <dd>
+A method for distributing a secret among a group of participants such that each
+participant receives a share, and a [=threshold=] number of shares is required to
+reconstruct the secret. Feldman's VSS provides the additional property that
+participants can verify that their shares are consistent with public commitments,
+detecting dishonest dealers without revealing the shares themselves.
+        </dd>
+      </dl>
+    </section>
+
+    <section class="normative">
+      <h2>Recovery Method Architecture</h2>
+      <p>The DID-KR architecture introduces a new verification relationship <code>recovery</code> in the DID Document. This relationship contains one or more [=recovery methods=] that define how a DID can be recovered.</p>
+
+      <section>
+        <h3>Discovery Model</h3>
+        <p>Recovery methods are discovered through standard DID resolution. A resolver or wallet implementing DID-KR:</p>
+        <ol>
+          <li>Resolves the DID Document.</li>
+          <li>Checks for the <code>@context</code> including the DID-KR context.</li>
+          <li>Extracts the <code>recovery</code> verification relationship.</li>
+          <li>Parses the recovery methods according to their <code>type</code>.</li>
+        </ol>
+      </section>
+
+      <section>
+        <h3>Lifecycle</h3>
+        <ol>
+          <li><strong>Setup:</strong> The DID Controller generates recovery parameters and publishes them in the DID Document.</li>
+          <li><strong>Execution:</strong> When recovery is needed, the recovering party initiates the protocol defined by the recovery method.</li>
+          <li><strong>Completion:</strong> Upon successful recovery, the DID Document is updated with new verification methods, and the recovery methods may be rotated.</li>
+          <li><strong>Revocation:</strong> Recovery methods can be revoked by the current controller using an active verification method.</li>
+        </ol>
+      </section>
+    </section>
+
+    <section class="normative">
+      <h2>Recovery Method Types</h2>
+
+      <section>
+        <h3>Type A: Social ZKP Recovery</h3>
+        <p><strong>Type URI:</strong> <code>RecoveryMethodZKPSocial</code></p>
+        <p>
+The Social ZKP Recovery mechanism enables recovery through a [=threshold=] of trusted
+[=guardians=] without revealing secret shares to any party, including the guardians
+themselves. Implementations MUST use Feldman's Verifiable Secret Sharing (VSS)
+with zero-knowledge proofs for share verification.
+        </p>
+
+        <section>
+          <h4>Cryptographic Requirements</h4>
+          <ul>
+            <li><strong>Verifiable Secret Sharing (VSS):</strong> Feldman's VSS using safe-prime group parameters.</li>
+            <li><strong>Zero-Knowledge Proofs:</strong> Schnorr proofs of share consistency.</li>
+            <li><strong>Group:</strong> The 256-bit safe-prime group (p, q, g) defined in §Cryptographic Primitives.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h4>Setup Phase</h4>
+          <ol>
+            <li>Generates a random secret <code>s ∈ Z<sub>q</sub></code> (the recovery key).</li>
+            <li>Constructs a random polynomial <code>P(x)</code> of degree <code>t−1</code> over <code>Z<sub>q</sub></code> where <code>P(0) = s</code>.</li>
+            <li>Computes shares <code>s<sub>i</sub> = P(i) mod q</code> for each of <code>n</code> guardians.</li>
+            <li>Computes Feldman commitments <code>C<sub>j</sub> = g<sup>a<sub>j</sub></sup> mod p</code> for each coefficient <code>a<sub>j</sub></code>.</li>
+            <li>Publishes commitments, guardian identifiers/endpoints, and [=threshold=] <code>t</code> in the DID Document.</li>
+          </ol>
+        </section>
+
+        <section>
+          <h4>Recovery Phase</h4>
+          <ol>
+            <li>Recovering party contacts <code>t</code> guardians.</li>
+            <li>Each guardian generates a Schnorr ZKP proving knowledge of share <code>s<sub>i</sub></code> consistent with commitments.</li>
+            <li>ZKPs are verified and shares are reconstructed using Lagrange interpolation in <code>Z<sub>q</sub></code>.</li>
+            <li>The reconstructed secret <code>s</code> is used to generate new DID keys.</li>
+          </ol>
+        </section>
+
+        <section>
+          <h4>DID Document Representation</h4>
+          <pre class="example" title="Type A Recovery Method">
+{
+  "id": "did:example:123#recovery-social",
+  "type": "RecoveryMethodZKPSocial",
+  "controller": "did:example:123",
+  "recoveryThreshold": 3,
+  "vssScheme": "feldman-safe-prime-256",
+  "vssGroupParameters": {
+    "p": "0x50179e4375e428b3af8fe52af1f2a50e5100b916d0d1c1bbedc304c3d35f3217",
+    "q": "0x280bcf21baf21459d7c7f29578f9528728805c8b6868e0ddf6e18261e9af990b",
+    "g": "4"
+  },
+  "vssCommitments": ["0x2a3f...", "0x7c91..."],
+  "recoveryGuardians": [
+    {
+      "id": "urn:hash:sha256:3a7b...c9f2",
+      "guardianEndpoint": "https://guardian1.example.com/recover",
+      "commitmentIndex": 0
+    }
+  ]
+}
+          </pre>
+        </section>
+
+        <div class="diagram-container">
+          <div class="diagram-title">Figure 1 — Type A: Social ZKP Recovery Flow</div>
+          <pre class="mermaid">
+sequenceDiagram
+    participant User as User (Recovering Party)
+    participant G1 as Guardian 1
+    participant G2 as Guardian 2
+    participant G3 as Guardian 3
+    User->>G1: Request recovery (nonce, commitments)
+    User->>G2: Request recovery (nonce, commitments)
+    User->>G3: Request recovery (nonce, commitments)
+    G1-->>User: ZKP Proof
+    G2-->>User: ZKP Proof
+    G3-->>User: ZKP Proof
+    User->>User: Verify ZKPs & reconstruct secret
+    User->>User: Generate new DID keys
+          </pre>
+        </div>
+      </section>
+
+      <section>
+        <h3>Type B: Deterministic Seedling Inheritance</h3>
+        <p><strong>Type URI:</strong> <code>RecoveryMethodDeterministic</code></p>
+        <p>
+The Deterministic Seedling mechanism enables recovery through a master seed phrase,
+with optional time-locked inheritance for [=beneficiaries=] using [=Verifiable Delay
+Functions=] (VDFs).
+        </p>
+
+        <section>
+          <h4>Cryptographic Requirements</h4>
+          <ul>
+            <li><strong>Hierarchical Deterministic Keys:</strong> BIP-32 or BIP-39 style derivation.</li>
+            <li><strong>Encryption:</strong> XChaCha20-Poly1305 for seed lockbox.</li>
+            <li><strong>Time-Locks:</strong> [=Verifiable Delay Functions=] (Wesolowski or Pietrzak).</li>
+          </ul>
+        </section>
+
+        <pre class="example" title="Type B Recovery Method">
+{
+  "id": "did:example:123#recovery-seedling",
+  "type": "RecoveryMethodDeterministic",
+  "controller": "did:example:123",
+  "seedDerivationPath": "m/44'/0'/0'/0/0",
+  "derivationStandard": "bip32-ed25519",
+  "encryptedSeedLockbox": {
+    "ciphertext": "0x7b3a...f9c2",
+    "algorithm": "XChaCha20-Poly1305",
+    "iv": "0x1a2b...3c4d",
+    "beneficiaryPublicKey": "did:beneficiary:abc#key-1",
+    "beneficiaryKeyType": "x25519"
+  },
+  "deadMansSwitch": {
+    "type": "VDFTimeLock",
+    "vdfParameters": {
+      "difficulty": 1000000,
+      "estimatedWallTime": "P30D",
+      "referencePlatform": "intel-i9-13900k-2024",
+      "tolerance": 0.2,
+      "vdfAlgorithm": "wesolowski-2024"
+    },
+    "inactivityPeriod": "P1Y"
+  }
+}
+        </pre>
+      </section>
+
+      <section>
+        <h3>Type C: MPC-Mediated Recovery</h3>
+        <p><strong>Type URI:</strong> <code>RecoveryMethodMPC</code></p>
+        <p>
+The MPC-Mediated Recovery mechanism distributes key shares across multiple
+independent [=providers=] who perform [=threshold=] signatures without reconstructing
+the full key, using fROST (Flexible Round-Optimized Schnorr Threshold) signatures.
+        </p>
+
+        <section>
+          <h4>Cryptographic Requirements</h4>
+          <ul>
+            <li><strong>Threshold Signatures:</strong> fROST (Flexible Round-Optimized Schnorr Threshold) signatures.</li>
+            <li><strong>Proactive Secret Sharing:</strong> [=Share refreshment=] as specified in §Cryptographic Primitives.</li>
+            <li><strong>Authentication:</strong> Verifiable Credentials or WebAuthn.</li>
+            <li><strong>Transport:</strong> mTLS or Noise Protocol for secure provider communication.</li>
+          </ul>
+        </section>
+
+        <pre class="example" title="Type C Recovery Method">
+{
+  "id": "did:example:123#recovery-mpc",
+  "type": "RecoveryMethodMPC",
+  "controller": "did:example:123",
+  "mpcThreshold": 2,
+  "mpcTotalProviders": 3,
+  "mpcProtocol": "fROST-ed25519",
+  "mpcProviders": [
+    {
+      "id": "did:provider:one#mpc-node",
+      "endpoint": "https://provider1.example.com/mpc",
+      "authType": "vc-presentation"
+    }
+  ],
+  "shareRotation": {
+    "rotationInterval": "P30D",
+    "currentEpoch": 42,
+    "lastRotationProof": "0x8a3c...f2b5",
+    "synchronization": {
+      "maxEpochSkew": 1,
+      "catchupProtocol": "vss-refresh-verifiable-2025",
+      "timeout": "PT30S",
+      "requiredQuorum": 2
+    }
+  }
+}
+        </pre>
+
+        <section>
+          <h4>Provider State Synchronization</h4>
+          <p>When providers operate at different [=epochs=], the recovery protocol MUST handle version skew. The [=catch-up protocol=] ensures lagging providers can synchronize:</p>
+          <ol>
+            <li><strong>Catch-up Request:</strong> Lagging provider sends a signed request to an up-to-date provider.</li>
+            <li><strong>Verifiable Refresh Transcript:</strong> Responding provider returns the group public key plus verifiable transcript of each refresh operation.</li>
+            <li><strong>Verification and Update:</strong> Lagging provider verifies each transcript and updates their local share.</li>
+          </ol>
+        </section>
+      </section>
+    </section>
+
+    <section class="normative">
+      <h2>Verification Relationships</h2>
+
+      <p>
+The <code>recovery</code> verification relationship indicates that the associated
+[=recovery methods=] are specifically authorized for recovering control of the DID.
+These methods are limited to recovery operations and MUST NOT be used for general
+authentication.
+      </p>
+
+      <pre class="example" title="DID Document with recovery relationship">
+{
+  "@context": [
+    "https://www.w3.org/ns/did/v1",
+    "https://w3c-ccg.github.io/did-recovery/context/v1"
+  ],
+  "id": "did:example:123",
+  "recovery": [
+    "did:example:123#recovery-social",
+    "did:example:123#recovery-seedling",
+    "did:example:123#recovery-mpc"
+  ]
+}
+      </pre>
+
+      <section>
+        <h3>Processing Rules</h3>
+        <ol>
+          <li>The resolver MUST verify that the recovery method is listed in the <code>recovery</code> relationship.</li>
+          <li>The resolver MUST verify that the recovery method's <code>controller</code> is authorized to modify the DID Document.</li>
+          <li>The resolver MUST perform dependency checking to prevent recovery loops (see §Security Considerations).</li>
+        </ol>
+      </section>
+    </section>
+
+    <section class="normative">
+      <h2>Cryptographic Primitives</h2>
+
+      <section>
+        <h3>VSS Group Parameters</h3>
+        <p>Feldman VSS verification requires the equation:</p>
+        <div class="math-block">
+g<sup>s<sub>i</sub></sup> ≡ ∏<sub>j=0</sub><sup>t-1</sup> C<sub>j</sub><sup>i<sup>j</sup></sup> (mod p)
+        </div>
+        <p>For this to hold consistently, exponents on both sides must reduce modulo the same value — the order of the generator <em>g</em> in the group. This requires:</p>
+        <ol>
+          <li>A [=scalar field=] of prime order <strong>q</strong> for polynomial arithmetic.</li>
+          <li>A group prime <strong>p</strong> with <strong>q | (p−1)</strong>, so that a subgroup of order exactly <strong>q</strong> exists.</li>
+          <li>A generator <strong>g</strong> of order exactly <strong>q</strong> in the [=commitment group=] Z<sub>p</sub>*.</li>
+        </ol>
+
+        <p>Implementations MUST use the following parameters, or an equivalent set verifiable by the same properties:</p>
+        <div class="param-box">
+          <div class="param-row"><span class="param-key">p</span>0x50179e4375e428b3af8fe52af1f2a50e5100b916d0d1c1bbedc304c3d35f3217</div>
+          <div class="param-row"><span class="param-key">q</span>0x280bcf21baf21459d7c7f29578f9528728805c8b6868e0ddf6e18261e9af990b</div>
+          <div class="param-row"><span class="param-key">g</span>4</div>
+          <div class="param-row"><span class="param-key">bits</span>256-bit [=safe prime=] (p = 2q+1)</div>
+        </div>
+
+        <p>Parameter verification MUST ensure:</p>
+        <div class="math-block">
+isPrime(p) = True<br>
+isPrime(q) = True<br>
+p = 2·q + 1<br>
+pow(g, q, p) = 1<br>
+pow(g, 1, p) ≠ 1
+        </div>
+      </section>
+
+      <section>
+        <h3>Verifiable Secret Sharing (Feldman's VSS)</h3>
+        <p>Let <code>(p, q, g)</code> be as defined above. All scalar operations are in <strong>Z<sub>q</sub></strong>. All commitment operations are in <strong>Z<sub>p</sub>*</strong>.</p>
+
+        <h4>Share Generation</h4>
+        <ol>
+          <li>Dealer chooses secret <code>s ∈ Z<sub>q</sub></code> and random coefficients <code>a<sub>1</sub>, …, a<sub>t-1</sub> ←<sub>R</sub> Z<sub>q</sub></code>.</li>
+          <li>Forms polynomial <code>P(x) = s + a<sub>1</sub>x + … + a<sub>t-1</sub>x<sup>t-1</sup></code> over <code>Z<sub>q</sub></code>.</li>
+          <li>For participant <code>i = 1…n</code>, share <code>s<sub>i</sub> = P(i) mod q</code>.</li>
+          <li>Computes Feldman commitments: <code>C<sub>j</sub> = g<sup>a<sub>j</sub></sup> mod p</code> for <code>j = 0…t-1</code>.</li>
+        </ol>
+
+        <h4>Share Verification</h4>
+        <p>Participant <code>i</code> verifies their share by checking:</p>
+        <div class="math-block">
+g<sup>s<sub>i</sub></sup> ≡ ∏<sub>j=0</sub><sup>t-1</sup> C<sub>j</sub><sup>i<sup>j</sup> mod q</sup> (mod p)
+        </div>
+
+        <h4>Secret Recovery</h4>
+        <p>Given <code>t</code> shares <code>{(i, s<sub>i</sub>)}</code>, recover <code>s = P(0)</code> via Lagrange interpolation in <code>Z<sub>q</sub></code>:</p>
+        <div class="math-block">
+s = ∑<sub>j</sub> s<sub>j</sub> · L<sub>j</sub>(0) mod q<br>
+L<sub>j</sub>(0) = ∏<sub>m≠j</sub> (0 − x<sub>m</sub>) / (x<sub>j</sub> − x<sub>m</sub>) mod q
+        </div>
+
+        <h4>Proactive Share Refreshment</h4>
+        <p>To re-randomize shares without changing the secret ([=share refreshment=]):</p>
+        <ol>
+          <li>Generate refresh polynomial <code>R(x) = r<sub>1</sub>x + … + r<sub>t-1</sub>x<sup>t-1</sup></code> over <code>Z<sub>q</sub></code> with <code>R(0) = 0</code>.</li>
+          <li>Compute refresh shares <code>δ<sub>i</sub> = R(i) mod q</code> and refresh commitments <code>D<sub>j</sub> = g<sup>r<sub>j</sub></sup> mod p</code>.</li>
+          <li>Update shares: <code>s<sub>i</sub><sup>new</sup> = (s<sub>i</sub><sup>old</sup> + δ<sub>i</sub>) mod q</code>.</li>
+          <li>Update commitments: <code>C<sub>j</sub><sup>new</sup> = C<sub>j</sub><sup>old</sup> · D<sub>j</sub> mod p</code>.</li>
+        </ol>
+      </section>
+
+      <section>
+        <h3>Zero-Knowledge Proof of Share</h3>
+        <p>To prove knowledge of share <code>s<sub>i</sub> ∈ Z<sub>q</sub></code> without revealing it (Schnorr proof):</p>
+        <ol>
+          <li>Prover chooses random <code>r ← Z<sub>q</sub></code>.</li>
+          <li>Prover sends <code>R = g<sup>r</sup> mod p</code>.</li>
+          <li>Verifier sends challenge <code>c ← Z<sub>q</sub></code>.</li>
+          <li>Prover sends <code>z = (r + c · s<sub>i</sub>) mod q</code>.</li>
+          <li>Verifier checks: <code>g<sup>z</sup> ≡ R · (∏ C<sub>j</sub><sup>i<sup>j</sup> mod q</sup>)<sup>c</sup> (mod p)</code>.</li>
+        </ol>
+      </section>
+
+      <section>
+        <h3>Verifiable Delay Function (Wesolowski)</h3>
+        <p><strong>Input:</strong> <code>x ∈ QR(N)</code>, time parameter <code>T</code><br>
+        <strong>Output:</strong> <code>y = x<sup>2<sup>T</sup></sup> mod N</code>, proof <code>π</code></p>
+        <ol>
+          <li>Compute <code>y = x<sup>2<sup>T</sup></sup> mod N</code> via sequential squaring.</li>
+          <li>Let <code>l = ⌊2<sup>T</sup> / 2⌋</code>, compute <code>π = x<sup>l</sup> mod N</code>.</li>
+          <li>Verifier checks: <code>π<sup>2<sup>(T/2)</sup></sup> · x<sup>2<sup>T</sup> mod 2<sup>(T/2)</sup></sup> = y mod N</code>.</li>
+        </ol>
+      </section>
+    </section>
+
+    <section class="informative">
+      <h2>Security Considerations</h2>
+
+      <section>
+        <h3>Guardian Collusion (Type A)</h3>
+        <p><strong>Threat:</strong> A [=threshold=] of [=guardians=] collude to reconstruct the user's private key.</p>
+        <p><strong>Mitigation:</strong> Feldman VSS with commitments ensures shares are individually verifiable. Guardians SHOULD be selected from diverse trust domains, and [=threshold=] SHOULD be ≥ 3-of-5. The use of zero-knowledge proofs prevents guardians from learning each other's shares during recovery.</p>
+      </section>
+
+      <section>
+        <h3>Time-Lock Bypass (Type B)</h3>
+        <p><strong>Threat:</strong> An attacker compromises the dead man's switch to release inheritance keys prematurely.</p>
+        <p><strong>Mitigation:</strong> [=Verifiable Delay Functions=] provide computational asymmetry that cannot be parallelized, making premature release computationally infeasible within the specified time window. The Wesolowski proof system enables efficient verification that the required sequential computation was performed.</p>
+      </section>
+
+      <section>
+        <h3>Provider State Drift (Type C)</h3>
+        <p><strong>Threat:</strong> MPC [=providers=] update shares independently, causing key desynchronization.</p>
+        <p><strong>Mitigation:</strong> [=Share refreshment=] with verifiable refresh transcripts ensures consistency. The [=catch-up protocol=] handles [=epoch=] lag by providing cryptographically verifiable refresh transcripts that lagging providers can verify and apply.</p>
+      </section>
+
+      <section>
+        <h3>Recovery-Loop Prevention</h3>
+        <p><strong>Threat:</strong> Circular recovery dependencies make recovery impossible.</p>
+        <p><strong>Mitigation:</strong> Implementations MUST validate that the dependency graph of [=recovery methods=] is acyclic at publication time, at recovery initiation, and during periodic health checks.</p>
+        <div class="math-block">
+function checkAcyclic(did, visited = new Set()):<br>
+&nbsp;&nbsp;if visited.has(did): return false<br>
+&nbsp;&nbsp;visited.add(did)<br>
+&nbsp;&nbsp;for each recoveryMethod in resolve(did).recovery:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;for each guardian in recoveryMethod.guardians:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if guardian.id is DID and not checkAcyclic(guardian.id, visited):<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return false<br>
+&nbsp;&nbsp;visited.delete(did)<br>
+&nbsp;&nbsp;return true
+        </div>
+      </section>
+
+      <section>
+        <h3>Key Wrapping Security</h3>
+        <p><strong>Threat:</strong> Weak encryption of seed lockboxes.</p>
+        <p><strong>Mitigation:</strong> All encrypted payloads MUST use AEAD with ≥ 256-bit keys. XChaCha20-Poly1305 or AES-256-GCM are REQUIRED. The algorithm MUST be explicitly named in the DID Document.</p>
+      </section>
+
+      <section>
+        <h3>Cryptographic Algorithm Aging</h3>
+        <p><strong>Threat:</strong> Current cryptographic algorithms may become vulnerable over time.</p>
+        <p><strong>Mitigation:</strong> Implementations SHOULD plan transition paths:</p>
+        <ul>
+          <li><strong>Type A:</strong> Consider lattice-based VSS for post-quantum security.</li>
+          <li><strong>Type B:</strong> Use hash-based signatures for seed commitment.</li>
+          <li><strong>Type C:</strong> Transition to threshold lattice signatures when standardized.</li>
+        </ul>
+      </section>
+    </section>
+
+    <section class="informative">
+      <h2>Privacy Considerations</h2>
+
+      <section>
+        <h3>Metadata Leakage</h3>
+        <p>Recovery methods may expose social graph ([=guardian=] identities), security posture ([=threshold=] values), and activity patterns. Implementations SHOULD use hashed guardian identifiers:</p>
+        <pre class="example">
+{
+  "recoveryGuardians": [{
+    "id": "urn:hash:sha256:3a7b...c9f2",
+    "salt": "0x4d8e...f2a3",
+    "guardianEndpoint": "http://guardian1.onion/recover"
+  }]
+}
+        </pre>
+      </section>
+
+      <section>
+        <h3>Guardian Privacy</h3>
+        <p>Instead of full DIDs, implementations SHOULD publish salted hashes of [=guardian=] identifiers to prevent correlation across different DIDs. Guardian endpoints SHOULD use onion services or other privacy-preserving communication channels where possible.</p>
+      </section>
+
+      <section>
+        <h3>Correlation Risk</h3>
+        <p>The same recovery method across multiple DIDs could correlate them. DID controllers SHOULD use different guardian sets, salt values, and encryption keys per DID to prevent correlation across identities.</p>
+      </section>
+
+      <section>
+        <h3>Beneficiary Privacy</h3>
+        <p>[=Beneficiaries=] SHOULD use single-use derived keys specific to each inheritance relationship, not linked to their primary identity. This prevents correlation of inheritance relationships across multiple DIDs.</p>
+      </section>
+    </section>
+
+    <section class="normative">
+      <h2>Interoperability Requirements</h2>
+
+      <section>
+        <h3>Mandatory-to-Implement Algorithms</h3>
+        <table class="simple">
+          <thead>
+            <tr><th>Algorithm</th><th>Usage</th> </tr>
+          </thead>
+          <tbody>
+            <tr><td>Ed25519</td><td>Signatures, guardian keys</td> </tr>
+            <tr><td>SHA-256</td><td>Hashing</td> </tr>
+            <tr><td>XChaCha20-Poly1305</td><td>Seed lockbox encryption</td> </tr>
+            <tr><td>AES-256-GCM</td><td>Share encryption at rest</td> </tr>
+            <tr><td>BIP-32</td><td>Key derivation</td> </tr>
+            <tr><td>fROST (Ed25519)</td><td>Threshold signatures</td> </tr>
+            <tr><td>Feldman VSS (p,q,g per §Cryptographic Primitives)</td><td>Verifiable secret sharing</td> </tr>
+            <tr><td>Wesolowski VDF</td><td>Time-locks</td> </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h3>Optional Algorithms</h3>
+        <table class="simple">
+          <thead>
+            <tr><th>Algorithm</th><th>Usage</th> </tr>
+          </thead>
+          <tbody>
+            <tr><td>secp256k1</td><td>Blockchain compatibility</td> </tr>
+            <tr><td>BLS12-381</td><td>Pairing-based cryptography</td> </tr>
+            <tr><td>Pietrzak VDF</td><td>Alternative time-locks</td> </tr>
+            <tr><td>Dilithium</td><td>Post-quantum signatures</td> </tr>
+            <tr><td>Kyber</td><td>Post-quantum encryption</td> </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h3>DID Method Compatibility</h3>
+        <p>This specification is DID method agnostic but requires methods that support DID Document updates, resolution for recovery method discovery, and deactivation of compromised recovery methods.</p>
+      </section>
+    </section>
+
+    <section class="normative">
+      <h2>JSON-LD Context</h2>
+      <p>The JSON-LD context is available at: <code>https://w3c-ccg.github.io/did-recovery/context/v1.jsonld</code></p>
+      <pre class="example" title="JSON-LD Context">
+{
+  "@context": {
+    "@version": 1.1,
+    "@protected": true,
+    "recovery": "https://w3c-ccg.github.io/did-recovery#recovery",
+    "RecoveryMethodZKPSocial": "https://w3c-ccg.github.io/did-recovery#RecoveryMethodZKPSocial",
+    "RecoveryMethodDeterministic": "https://w3c-ccg.github.io/did-recovery#RecoveryMethodDeterministic",
+    "RecoveryMethodMPC": "https://w3c-ccg.github.io/did-recovery#RecoveryMethodMPC",
+    "recoveryThreshold": "https://w3c-ccg.github.io/did-recovery#recoveryThreshold",
+    "vssScheme": "https://w3c-ccg.github.io/did-recovery#vssScheme",
+    "vssGroupParameters": "https://w3c-ccg.github.io/did-recovery#vssGroupParameters",
+    "vssCommitments": "https://w3c-ccg.github.io/did-recovery#vssCommitments",
+    "recoveryGuardians": "https://w3c-ccg.github.io/did-recovery#recoveryGuardians",
+    "guardianEndpoint": "https://w3c-ccg.github.io/did-recovery#guardianEndpoint",
+    "seedDerivationPath": "https://w3c-ccg.github.io/did-recovery#seedDerivationPath",
+    "encryptedSeedLockbox": "https://w3c-ccg.github.io/did-recovery#encryptedSeedLockbox",
+    "deadMansSwitch": "https://w3c-ccg.github.io/did-recovery#deadMansSwitch",
+    "mpcThreshold": "https://w3c-ccg.github.io/did-recovery#mpcThreshold",
+    "mpcProviders": "https://w3c-ccg.github.io/did-recovery#mpcProviders",
+    "shareRotation": "https://w3c-ccg.github.io/did-recovery#shareRotation",
+    "currentEpoch": "https://w3c-ccg.github.io/did-recovery#currentEpoch",
+    "synchronization": "https://w3c-ccg.github.io/did-recovery#synchronization",
+    "maxEpochSkew": "https://w3c-ccg.github.io/did-recovery#maxEpochSkew",
+    "catchupProtocol": "https://w3c-ccg.github.io/did-recovery#catchupProtocol"
+  }
+}
+      </pre>
+    </section>
+
+    <section class="informative">
+      <h2>Test Vectors</h2>
+
+      <section>
+        <h3>Type A Test Vector — Feldman VSS</h3>
+        <p><strong>Group parameters:</strong> (p, q, g) as defined in §Cryptographic Primitives.</p>
+        <p><strong>Setup:</strong> Secret <code>s = 42</code>, [=threshold=] <code>t = 2</code>, total shares <code>n = 3</code>, polynomial <code>P(x) = 42 + 17·x</code> (over Z<sub>q</sub>).</p>
+        <div class="math-block">
+Shares: s₁ = P(1) mod q = 59<br>
+s₂ = P(2) mod q = 76<br>
+s₃ = P(3) mod q = 93
+        </div>
+        <p><strong>Commitments:</strong> <code>C₀ = 4<sup>42</sup> mod p</code>, <code>C₁ = 4<sup>17</sup> mod p</code></p>
+        <p><strong>Share verification example</strong> for <code>s₃</code> (x=3):</p>
+        <div class="math-block">
+LHS = 4<sup>93</sup> mod p<br>
+RHS = C₀<sup>1</sup> · C₁<sup>3 mod q</sup> mod p = 4<sup>42</sup> · 4<sup>17·3</sup> mod p = 4<sup>42+51</sup> mod p = 4<sup>93</sup> mod p ✓
+        </div>
+        <p><strong>Recovery with shares s₁, s₂</strong> (Lagrange in Z<sub>q</sub>):</p>
+        <div class="math-block">
+L₁(0) = (0−2)/(1−2) mod q = (−2)·(−1)⁻¹ mod q = 2<br>
+L₂(0) = (0−1)/(2−1) mod q = (−1)·(1)⁻¹ mod q = q−1<br>
+s = 59·2 + 76·(q−1) mod q = 118 − 76 = 42 ✓
+        </div>
+      </section>
+
+      <section>
+        <h3>Type A Test Vector — Proactive Refresh</h3>
+        <p>Applying a refresh polynomial <code>R(x) = 5·x</code> (R(0)=0):</p>
+        <div class="math-block">
+δ₁ = 5, δ₂ = 10, δ₃ = 15<br>
+s₁ᶰᵉʷ = 59 + 5 = 64<br>
+s₂ᶰᵉʷ = 76 + 10 = 86<br>
+s₃ᶰᵉʷ = 93 + 15 = 108<br>
+C₀ᶰᵉʷ = C₀ · g⁰ = C₀<br>
+C₁ᶰᵉʷ = C₁ · 4⁵ = 4¹⁷ · 4⁵ = 4²² mod p<br>
+Recovery: 64·2 + 86·(q−1) = 128 − 86 = 42 ✓
+        </div>
+      </section>
+
+      <section>
+        <h3>Type B Test Vector</h3>
+        <p><strong>Master Seed:</strong> <code>0x7f3a9b8c2d5e1f4a3b6c7d8e9f0a1b2c</code></p>
+        <p><strong>Derivation Path:</strong> <code>m/44'/0'/0'/0/0</code></p>
+        <p><strong>PBKDF2 salt:</strong> <code>"did-recovery-salt:did:example:123"</code> (UTF-8), 100,000 iterations</p>
+        <p><strong>Derived Private Key:</strong> <code>SHA-256(PBKDF2(seed, salt, 100000, 32))</code></p>
+      </section>
+
+      <section>
+        <h3>Type C Test Vector</h3>
+        <p><strong>fROST t=2, n=3</strong> — share format (illustrative):</p>
+        <pre>
+Group Public Key: 0x3a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d...
+Share 1 (epoch 1): 0x8c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f...
+Share 2 (epoch 1): 0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e...
+Share 3 (epoch 1): 0x7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c...
+        </pre>
+      </section>
+    </section>
+
+    <section class="appendix informative">
+      <h2>Acknowledgements</h2>
+      <p>
+The editor thanks the members of the W3C Credentials Community Group for their
+valuable feedback.
+      </p>
+    </section>
+
+    <section class="appendix informative">
+      <h2>References</h2>
+
+      <section>
+        <h3>Normative References</h3>
+        <dl>
+          <dt>[DID-CORE]</dt><dd><cite><a href="https://www.w3.org/TR/did/">Decentralized Identifiers v1.0</a></cite>. Manu Sporny; Dave Longley; Markus Sabadello; Drummond Reed; Orie Steele; Christopher Allen. W3C. 19 July 2022. W3C Recommendation. URL: <a href="https://www.w3.org/TR/did/">https://www.w3.org/TR/did/</a></dd>
+          <dt>[RFC2119]</dt><dd><cite><a href="https://www.rfc-editor.org/rfc/rfc2119">Key words for use in RFCs to Indicate Requirement Levels</a></cite>. S. Bradner. IETF. March 1997. Best Current Practice. URL: <a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a></dd>
+          <dt>[RFC8174]</dt><dd><cite><a href="https://www.rfc-editor.org/rfc/rfc8174">Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words</a></cite>. B. Leiba. IETF. May 2017. Best Current Practice. URL: <a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a></dd>
+          <dt>[FROST]</dt><dd><cite><a href="https://datatracker.ietf.org/doc/draft-irtf-cfrg-frost/">Flexible Round-Optimized Schnorr Threshold Signatures</a></cite>. Deirdre Connolly; Chelsea H. Komlo; Ian Goldberg; Christopher A. Wood. IETF. 2023. Internet-Draft. URL: <a href="https://datatracker.ietf.org/doc/draft-irtf-cfrg-frost/">https://datatracker.ietf.org/doc/draft-irtf-cfrg-frost/</a></dd>
+          <dt>[FELDMAN]</dt><dd><cite><a href="https://dl.acm.org/doi/10.1109/SFCS.1987.47">A Practical Scheme for Non-interactive Verifiable Secret Sharing</a></cite>. Paul Feldman. IEEE. 1987. URL: <a href="https://dl.acm.org/doi/10.1109/SFCS.1987.47">https://dl.acm.org/doi/10.1109/SFCS.1987.47</a></dd>
+          <dt>[VDF]</dt><dd><cite><a href="https://eprint.iacr.org/2018/601">Verifiable Delay Functions</a></cite>. Dan Boneh; Joseph Bonneau; Benedikt Bünz; Ben Fisch. IACR. 2018. URL: <a href="https://eprint.iacr.org/2018/601">https://eprint.iacr.org/2018/601</a></dd>
+        </dl>
+      </section>
+
+      <section>
+        <h3>Informative References</h3>
+        <dl>
+          <dt>[BIP32]</dt><dd><cite><a href="https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki">Hierarchical Deterministic Wallets</a></cite>. Pieter Wuille. Bitcoin. 2012. URL: <a href="https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki">https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki</a></dd>
+          <dt>[BIP39]</dt><dd><cite><a href="https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki">Mnemonic code for generating deterministic keys</a></cite>. Marek Palatinus; Pavol Rusnak; Aaron Voisine; Sean Bowe. Bitcoin. 2013. URL: <a href="https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki">https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki</a></dd>
+          <dt>[PROACTIVE]</dt><dd><cite><a href="https://link.springer.com/chapter/10.1007/3-540-58607-1_59">Proactive Secret Sharing Or: How to Cope With Perpetual Leakage</a></cite>. Amir Herzberg; Stanislaw Jarecki; Hugo Krawczyk; Moti Yung. Springer. 1995. URL: <a href="https://link.springer.com/chapter/10.1007/3-540-58607-1_59">https://link.springer.com/chapter/10.1007/3-540-58607-1_59</a></dd>
+          <dt>[SAFE-PRIME]</dt><dd><cite><a href="https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-57pt1r5.pdf">Recommendation for Key Management</a></cite>. NIST. 2020. URL: <a href="https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-57pt1r5.pdf">https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-57pt1r5.pdf</a></dd>
+        </dl>
+      </section>
+    </section>
+
+    <script type="text/javascript">
+      // Initialize mermaid for diagrams
+      var script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/mermaid@10.8.0/dist/mermaid.min.js';
+      script.onload = function() {
+        mermaid.initialize({ startOnLoad: true, theme: 'base', securityLevel: 'loose' });
+      };
+      document.head.appendChild(script);
+    </script>
+  </body>
+</html>
