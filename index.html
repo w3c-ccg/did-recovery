@@ -611,7 +611,7 @@ the full key, using fROST (Flexible Round-Optimized Schnorr Threshold) signature
 
         <section>
           <h4>Provider State Synchronization</h4>
-          <p>When providers operate at different [=epochs=], the recovery protocol MUST handle version skew. The [=catch-up protocol=] ensures lagging providers can synchronize:</p>
+          <p>When providers operate at different epochs, the recovery protocol MUST handle version skew. The [=catch-up protocol=] ensures lagging providers can synchronize:</p>
           <ol>
             <li><strong>Catch-up Request:</strong> Lagging provider sends a signed request to an up-to-date provider.</li>
             <li><strong>Verifiable Refresh Transcript:</strong> Responding provider returns the group public key plus verifiable transcript of each refresh operation.</li>
